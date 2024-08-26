@@ -1,6 +1,6 @@
 export default async function sitemap() {
     const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
-    const response = await fetch(`${baseUrl}/api/blogs`);
+    const response = await fetch(`${baseUrl}/api/blogs`,{cache: 'force-cache'});
     const data = await response.json();
     // console.log(data);
     return data.map((item) => ({
