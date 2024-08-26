@@ -7,7 +7,7 @@ export async function GET(request) {
       headers: {
         'Content-Type': 'application/json',
       },
-      cache: 'force-cache',
+      cache: 'no-store', // Change this line to bypass the cache
     });
 
     const data = await response.json();
