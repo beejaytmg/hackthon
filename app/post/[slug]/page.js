@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation';
 import formatDate from './formatDate';
 async function getBlogPost(slug) {
-  const res = await fetch(`http://localhost:3000/api/blog/${slug}`, { next: { revalidate: 60 } });
+  const res = await fetch(`https://blog-teal-zeta-25.vercel.app/api/blog/${slug}`, { next: { revalidate: 60 } });
   if (!res.ok) {
     notFound();
   }
