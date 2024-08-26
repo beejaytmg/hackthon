@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+
+Disallow: /login
+Disallow: /post/create
+
+Sitemap: https://bijayakumartamang.com.np/sitemap.xml
