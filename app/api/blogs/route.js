@@ -2,13 +2,13 @@ import { NextResponse } from 'next/server';
 
 export async function GET(request) {
   try {
-    const url = `https://portbijay.pythonanywhere.com/api/blogs?_=${Date.now()}`; // Cache-busting with timestamp
 
-    const response = await fetch(url, {
+    const response = await fetch('https://portbijay.pythonanywhere.com/api/blogs', {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
       },
+      cache: 'no-cache'
     });
 
     const data = await response.json();
