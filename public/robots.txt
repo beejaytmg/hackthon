@@ -3,5 +3,7 @@ Allow: /
 
 Disallow: /login
 Disallow: /post/create
+Disallow: /movies
+Disallow: /movie
 
 Sitemap: https://bijayakumartamang.com.np/sitemap.xml
