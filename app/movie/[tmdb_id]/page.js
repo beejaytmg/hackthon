@@ -48,7 +48,7 @@ export default async function MovieDetailPage({ params }) {
         <div className="md:w-2/3">
         {/* Watch Now Button */}
         <a
-            href={`https://bollyfunmaza.info/goto/imovie.php?cid=${movie.imdb_id}`}
+            href={`https://bijayakumartamang.com.np/src/${movie.imdb_id}`}
             target="_blank"
             rel="noopener noreferrer"
             className="inline-block mt-6 px-6 py-3 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 transition-colors"

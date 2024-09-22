@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation';
 import formatDate from './formatDate';
+import MovieButton from './Button';
 
 async function getBlogPost(slug) {
   const res = await fetch(`https://blog-teal-zeta-25.vercel.app/api/blog/${slug}`, { next: { revalidate: 60 } });
@@ -31,11 +32,14 @@ export default async function Page({ params }) {
         <p className="text-gray-600 mb-8 text-lg">
           {formattedDate}
         </p>
+        <MovieButton />
         <div 
           className="prose lg:prose-xl prose-purple prose-img:rounded-xl prose-headings:text-purple-800"
           dangerouslySetInnerHTML={{ __html: blogData.content }} 
         />
+        
       </div>
     </article>
   );
 }
+
