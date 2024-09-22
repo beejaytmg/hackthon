@@ -40,19 +40,10 @@ export default async function MovieDetailPage({ params }) {
     <div className="container mx-auto px-4 py-8">
       <div className="flex flex-col md:flex-row gap-8">
         <div className="md:w-1/3">
-          {tmdbDetails && tmdbDetails.poster_path ? (
-            <Image
-              src={`https://image.tmdb.org/t/p/original${tmdbDetails.poster_path}`}
-              alt={tmdbDetails.title || movie.title || `Movie ${tmdb_id}`}
-              width={500}
-              height={750}
-              className="w-full h-auto rounded-lg shadow-lg"
-            />
-          ) : (
+      
             <div className="w-full h-0 pb-[150%] bg-gray-300 flex items-center justify-center rounded-lg shadow-lg">
               <span className="text-gray-500">No poster available</span>
             </div>
-          )}
         </div>
         <div className="md:w-2/3">
         {/* Watch Now Button */}

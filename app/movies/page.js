@@ -47,7 +47,7 @@ export default async function MoviesPage({ searchParams }) {
         {moviesWithDetails.map((movie) => (
           <Link href={`/movie/${movie.tmdb_id}`} key={movie.id}>
             <div className="relative overflow-hidden rounded-lg shadow-lg">
-              {movie.poster_path ? (
+              {/* {movie.poster_path ? (
                 <Image
                   src={`https://image.tmdb.org/t/p/original${movie.poster_path}`}
                   alt={movie.title || `Movie ${movie.tmdb_id}`}
@@ -55,11 +55,11 @@ export default async function MoviesPage({ searchParams }) {
                   height={375} // Smaller height
                   className="w-full h-auto"
                 />
-              ) : (
+              ) : ( */}
                 <div className="w-full h-0 pb-[150%] bg-gray-300 flex items-center justify-center">
                   <span className="text-gray-500">No poster available</span>
                 </div>
-              )}
+              {/* )} */}
               <div className="absolute inset-0 bg-black bg-opacity-50 flex flex-col justify-end p-4">
                 <h2 className="text-white text-lg font-semibold">{movie.title || `Movie ${movie.tmdb_id}`}</h2>
                 <div className="flex justify-between mt-2">
