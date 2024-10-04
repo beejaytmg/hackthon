@@ -20,7 +20,7 @@ export default function Navbar() {
             <div className="ml-10 flex items-baseline space-x-4">
               <NavLink href="/" text="Home" />
               <NavLink href="#" text="About" />
-              <NavLink href="#" text="Projects" />
+              <NavLink href="/ytshorts" text="Yt Shorts Downloader" />
               <NavLink href="#" text="Contact" />
             </div>
           </div>
