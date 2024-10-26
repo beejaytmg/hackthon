@@ -47,7 +47,7 @@ const TicTacToe = () => {
   };
 
   const handleClick = async (index) => {
-    if (board[index] !== 0 || gameStatus === 'won' || gameStatus === 'draw') return;
+    if (isThinking || board[index] !== 0 || gameStatus === 'won' || gameStatus === 'draw') return;
 
     const newBoard = [...board];
     newBoard[index] = currentPlayer;
@@ -96,6 +96,7 @@ const TicTacToe = () => {
         key={index}
         onClick={() => handleClick(index)}
         className="w-full h-full flex items-center justify-center bg-white hover:bg-gray-100 border border-gray-200 rounded-lg transition-colors"
+        disabled={isThinking || value !== 0 || gameStatus === 'won' || gameStatus === 'draw'} // Disable button if AI is thinking or game is over
       >
         {value === 1 && <X className="w-12 h-12 text-blue-500" />}
         {value === 2 && <Circle className="w-12 h-12 text-red-500" />}
