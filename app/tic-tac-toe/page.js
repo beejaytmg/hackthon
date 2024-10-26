@@ -5,16 +5,15 @@ import { X, Circle } from 'lucide-react';
 const TicTacToe = () => {
   const [board, setBoard] = useState(Array(9).fill(0));
   const [currentPlayer, setCurrentPlayer] = useState(1);
-  const [gameMode, setGameMode] = useState(null);
-  const [gameStatus, setGameStatus] = useState('select');
+  const [gameMode, setGameMode] = useState(null); // null, 'ai', or 'friend'
+  const [gameStatus, setGameStatus] = useState('select'); // select, playing, won, draw
   const [winner, setWinner] = useState(null);
-  const [isThinking, setIsThinking] = useState(false);
-  const [playerNumber, setPlayerNumber] = useState(1);
+  const [isThinking, setIsThinking] = useState(false); // New state for AI thinking
 
   const winningCombos = [
-    [0, 1, 2], [3, 4, 5], [6, 7, 8],
-    [0, 3, 6], [1, 4, 7], [2, 5, 8],
-    [0, 4, 8], [2, 4, 6]
+    [0, 1, 2], [3, 4, 5], [6, 7, 8], // rows
+    [0, 3, 6], [1, 4, 7], [2, 5, 8], // columns
+    [0, 4, 8], [2, 4, 6] // diagonals
   ];
 
   const checkWinner = (boardState) => {
@@ -30,18 +29,13 @@ const TicTacToe = () => {
 
   const getAIMove = async (boardState) => {
     try {
-      // Convert board state for API
-      const apiBoard = playerNumber === 2 
-        ? boardState.map(cell => cell === 1 ? 2 : (cell === 2 ? 1 : 0))
-        : [...boardState];
-
       const response = await fetch('https://modelhost-production.up.railway.app/predict', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          input: apiBoard
+          input: boardState
         })
       });
       const data = await response.json();
@@ -52,39 +46,11 @@ const TicTacToe = () => {
     }
   };
 
-  const makeAIMove = async (boardState) => {
-    setIsThinking(true);
-    const aiMove = await getAIMove(boardState);
-    setIsThinking(false);
-
-    if (aiMove !== null) {
-      const aiBoard = [...boardState];
-      const aiPlayerNumber = playerNumber === 1 ? 2 : 1;
-      aiBoard[aiMove] = aiPlayerNumber;
-      setBoard(aiBoard);
-      
-      const aiResult = checkWinner(aiBoard);
-      if (aiResult) {
-        setGameStatus(aiResult === 'draw' ? 'draw' : 'won');
-        setWinner(aiResult);
-      } else {
-        setCurrentPlayer(playerNumber);
-      }
-    }
-  };
-
   const handleClick = async (index) => {
-    // Return if: cell is occupied, game is over, or it's AI's turn
-    if (board[index] !== 0 || 
-        gameStatus === 'won' || 
-        gameStatus === 'draw' || 
-        isThinking ||
-        (gameMode === 'ai' && currentPlayer !== playerNumber)) {
-      return;
-    }
+    if (board[index] !== 0 || gameStatus === 'won' || gameStatus === 'draw') return;
 
     const newBoard = [...board];
-    newBoard[index] = playerNumber;
+    newBoard[index] = currentPlayer;
     setBoard(newBoard);
 
     const result = checkWinner(newBoard);
@@ -94,60 +60,42 @@ const TicTacToe = () => {
       return;
     }
 
-    if (gameMode === 'ai') {
-      setCurrentPlayer(playerNumber === 1 ? 2 : 1);
-      await makeAIMove(newBoard);
+    if (gameMode === 'ai' && currentPlayer === 1) {
+      setIsThinking(true); // Set thinking state to true
+      const aiMove = await getAIMove(newBoard);
+      setIsThinking(false); // Reset thinking state after getting the move
+
+      if (aiMove !== null) {
+        setTimeout(() => {
+          const aiBoard = [...newBoard];
+          aiBoard[aiMove] = 2;
+          setBoard(aiBoard);
+          const aiResult = checkWinner(aiBoard);
+          if (aiResult) {
+            setGameStatus(aiResult === 'draw' ? 'draw' : 'won');
+            setWinner(aiResult);
+          }
+        }, 500);
+      }
     } else {
       setCurrentPlayer(currentPlayer === 1 ? 2 : 1);
     }
   };
 
-  const startGame = async (mode, movePosition) => {
-    const newBoard = Array(9).fill(0);
-    setBoard(newBoard);
-    setGameMode(mode);
-    setGameStatus('playing');
-    setPlayerNumber(movePosition);
-    setCurrentPlayer(1);
-    setWinner(null);
-    setIsThinking(false);
-
-    // If player chose to go second (O), AI makes first move
-    if (mode === 'ai' && movePosition === 2) {
-      await makeAIMove(newBoard);
-    }
-  };
-
   const resetGame = () => {
-    const newBoard = Array(9).fill(0);
-    setBoard(newBoard);
+    setBoard(Array(9).fill(0));
     setCurrentPlayer(1);
     setGameStatus('playing');
     setWinner(null);
-    setIsThinking(false);
-    
-    // If player is second, AI makes first move
-    if (gameMode === 'ai' && playerNumber === 2) {
-      makeAIMove(newBoard);
-    }
+    setIsThinking(false); // Reset thinking state on game reset
   };
 
   const renderCell = (value, index) => {
-    const isDisabled = 
-      board[index] !== 0 || 
-      gameStatus === 'won' || 
-      gameStatus === 'draw' || 
-      isThinking ||
-      (gameMode === 'ai' && currentPlayer !== playerNumber);
-
     return (
       <button
         key={index}
         onClick={() => handleClick(index)}
-        className={`w-full h-full flex items-center justify-center bg-white 
-          ${!isDisabled ? 'hover:bg-gray-100' : 'cursor-not-allowed'} 
-          border border-gray-200 rounded-lg transition-colors`}
-        disabled={isDisabled}
+        className="w-full h-full flex items-center justify-center bg-white hover:bg-gray-100 border border-gray-200 rounded-lg transition-colors"
       >
         {value === 1 && <X className="w-12 h-12 text-blue-500" />}
         {value === 2 && <Circle className="w-12 h-12 text-red-500" />}
@@ -162,26 +110,23 @@ const TicTacToe = () => {
           <h1 className="text-4xl font-bold mb-8 text-gray-800">Tic Tac Toe</h1>
           <div className="space-y-4">
             <button
-              onClick={() => startGame('friend', 1)}
+              onClick={() => {
+                setGameMode('friend');
+                setGameStatus('playing');
+              }}
               className="w-64 p-4 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
             >
               Play with Friend
             </button>
-            <div className="space-y-2">
-              <h2 className="text-xl font-semibold text-gray-700">Play with AI</h2>
-              <button
-                onClick={() => startGame('ai', 1)}
-                className="w-64 p-4 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors"
-              >
-                Play First (X)
-              </button>
-              <button
-                onClick={() => startGame('ai', 2)}
-                className="w-64 p-4 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors"
-              >
-                Play Second (O)
-              </button>
-            </div>
+            <button
+              onClick={() => {
+                setGameMode('ai');
+                setGameStatus('playing');
+              }}
+              className="w-64 p-4 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors"
+            >
+              Play with AI
+            </button>
           </div>
         </div>
       </div>
@@ -195,18 +140,18 @@ const TicTacToe = () => {
           Tic Tac Toe
         </h1>
         <div className="mb-4 text-center">
-          {gameStatus === 'playing' && !isThinking && (
+          {gameStatus === 'playing' && (
             <p className="text-xl text-gray-600">
-              {gameMode === 'ai' 
-                ? (currentPlayer === playerNumber ? "Your turn" : "AI's turn")
+              {gameMode === 'ai' && currentPlayer === 2 
+                ? "AI's turn" 
                 : `Player ${currentPlayer}'s turn`}
             </p>
           )}
-          {isThinking && <p className="text-xl text-gray-600">AI is thinking...</p>}
+          {isThinking && <p className="text-xl text-gray-600">AI is thinking...</p>} {/* Display thinking message */}
           {gameStatus === 'won' && (
             <p className="text-xl text-green-600">
-              {gameMode === 'ai'
-                ? (winner === playerNumber ? 'You win!' : 'AI wins!')
+              {winner === 2 && gameMode === 'ai' 
+                ? 'AI wins!' 
                 : `Player ${winner} wins!`}
             </p>
           )}
