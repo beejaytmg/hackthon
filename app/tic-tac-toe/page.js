@@ -1,35 +1,50 @@
 'use client';
-import { useState } from 'react';
-import { X, Circle } from 'lucide-react';
 
-const TicTacToe = () => {
+import { useState, useEffect } from 'react';
+
+const metadata = {
+  title: 'AI Tic Tac Toe',
+  description: 'Play Tic Tac Toe against an AI opponent',
+};
+
+export default function Page() {
   const [board, setBoard] = useState(Array(9).fill(0));
-  const [currentPlayer, setCurrentPlayer] = useState(1);
-  const [gameMode, setGameMode] = useState(null); // null, 'ai', or 'friend'
-  const [gameStatus, setGameStatus] = useState('select'); // select, playing, won, draw
+  const [isPlayerTurn, setIsPlayerTurn] = useState(true);
+  const [gameStarted, setGameStarted] = useState(false);
   const [winner, setWinner] = useState(null);
-  const [isThinking, setIsThinking] = useState(false); // For AI thinking state
-  const [isProcessing, setIsProcessing] = useState(false); // For any move processing
+  const [isPlayerFirst, setIsPlayerFirst] = useState(true);
+  const [loading, setLoading] = useState(false);
 
-  const winningCombos = [
-    [0, 1, 2], [3, 4, 5], [6, 7, 8], // rows
-    [0, 3, 6], [1, 4, 7], [2, 5, 8], // columns
-    [0, 4, 8], [2, 4, 6] // diagonals
-  ];
+  const getCellSymbol = (value) => {
+    if (value === 0) return '';
+    if (isPlayerFirst) {
+      return value === 1 ? 'X' : 'O';
+    } else {
+      return value === 1 ? 'O' : 'X';
+    }
+  };
 
-  const checkWinner = (boardState) => {
-    for (let combo of winningCombos) {
-      const [a, b, c] = combo;
-      if (boardState[a] && boardState[a] === boardState[b] && boardState[a] === boardState[c]) {
-        return boardState[a];
+  const checkWinner = (squares) => {
+    const lines = [
+      [0, 1, 2], [3, 4, 5], [6, 7, 8],
+      [0, 3, 6], [1, 4, 7], [2, 5, 8],
+      [0, 4, 8], [2, 4, 6]
+    ];
+
+    for (let line of lines) {
+      const [a, b, c] = line;
+      if (squares[a] && squares[a] === squares[b] && squares[a] === squares[c]) {
+        return squares[a];
       }
     }
-    if (!boardState.includes(0)) return 'draw';
+
+    if (squares.every(square => square !== 0)) return 'draw';
     return null;
   };
 
   const getAIMove = async (boardState) => {
     try {
+      setLoading(true);
       const response = await fetch('https://modelhost-production.up.railway.app/predict', {
         method: 'POST',
         headers: {
@@ -39,162 +54,149 @@ const TicTacToe = () => {
           input: boardState
         })
       });
+      
+      if (!response.ok) {
+        throw new Error('Network response was not ok');
+      }
+      
       const data = await response.json();
       return data.predicted_move;
     } catch (error) {
       console.error('Error getting AI move:', error);
       return null;
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleClick = async (index) => {
-    // Return if cell is occupied, game is over, or processing is happening
-    if (board[index] !== 0 || 
-        gameStatus === 'won' || 
-        gameStatus === 'draw' || 
-        isProcessing || 
-        isThinking) return;
-
-    setIsProcessing(true); // Start processing state
+  const makeMove = async (index) => {
+    if (board[index] !== 0 || !gameStarted || winner || !isPlayerTurn || loading) return;
 
     const newBoard = [...board];
-    newBoard[index] = currentPlayer;
+    // Player is always 1, AI is always 2, regardless of X or O
+    newBoard[index] = 1;
     setBoard(newBoard);
+    setIsPlayerTurn(false);
 
-    const result = checkWinner(newBoard);
-    if (result) {
-      setGameStatus(result === 'draw' ? 'draw' : 'won');
-      setWinner(result);
-      setIsProcessing(false); // End processing state
+    const gameWinner = checkWinner(newBoard);
+    if (gameWinner) {
+      setWinner(gameWinner);
       return;
     }
 
-    if (gameMode === 'ai' && currentPlayer === 1) {
-      setIsThinking(true); // Set thinking state for AI
-      const aiMove = await getAIMove(newBoard);
-
-      if (aiMove !== null) {
-        setTimeout(() => {
-          const aiBoard = [...newBoard];
-          aiBoard[aiMove] = 2;
-          setBoard(aiBoard);
-          const aiResult = checkWinner(aiBoard);
-          if (aiResult) {
-            setGameStatus(aiResult === 'draw' ? 'draw' : 'won');
-            setWinner(aiResult);
-          }
-          setIsThinking(false); // Reset thinking state
-          setIsProcessing(false); // End processing state
-        }, 500);
-      } else {
-        setIsThinking(false);
-        setIsProcessing(false);
+    // AI's turn
+    const aiMove = await getAIMove(newBoard);
+    if (aiMove !== null && newBoard[aiMove] === 0) {
+      newBoard[aiMove] = 2;
+      setBoard(newBoard);
+      setIsPlayerTurn(true);
+      
+      const finalWinner = checkWinner(newBoard);
+      if (finalWinner) {
+        setWinner(finalWinner);
       }
-    } else {
-      setCurrentPlayer(currentPlayer === 1 ? 2 : 1);
-      setIsProcessing(false); // End processing state
     }
   };
 
-  const resetGame = () => {
+  const startGame = async (playFirst) => {
     setBoard(Array(9).fill(0));
-    setCurrentPlayer(1);
-    setGameStatus('playing');
     setWinner(null);
-    setIsThinking(false);
-    setIsProcessing(false);
+    setGameStarted(true);
+    setIsPlayerTurn(playFirst);
+    setIsPlayerFirst(playFirst);
+
+    if (!playFirst) {
+      await makeAIFirstMove();
+    }
   };
 
-  const renderCell = (value, index) => {
-    const isDisabled = isProcessing || isThinking;
+  const makeAIFirstMove = async () => {
+    const newBoard = Array(9).fill(0);
+    const aiMove = await getAIMove(newBoard);
+    if (aiMove !== null) {
+      newBoard[aiMove] = 2; // AI is always 2
+      setBoard(newBoard);
+      setIsPlayerTurn(true);
+    }
+  };
+
+  const getCellStyle = (index) => {
+    const baseStyle = "w-24 h-24 bg-white border-2 border-gray-300 text-4xl font-bold flex items-center justify-center transition-colors duration-200";
     
-    return (
-      <button
-        key={index}
-        onClick={() => handleClick(index)}
-        disabled={isDisabled}
-        className={`w-full h-full flex items-center justify-center border border-gray-200 rounded-lg transition-colors ${
-          isDisabled 
-            ? 'bg-gray-100 cursor-not-allowed' 
-            : 'bg-white hover:bg-gray-100'
-        }`}
-      >
-        {value === 1 && <X className="w-12 h-12 text-blue-500" />}
-        {value === 2 && <Circle className="w-12 h-12 text-red-500" />}
-      </button>
-    );
+    if (!gameStarted || board[index] !== 0 || !isPlayerTurn || winner || loading) {
+      return `${baseStyle} cursor-not-allowed`;
+    }
+    
+    return `${baseStyle} hover:bg-gray-50 cursor-pointer`;
   };
 
-  if (gameStatus === 'select') {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
-        <div className="text-center">
-          <h1 className="text-4xl font-bold mb-8 text-gray-800">Tic Tac Toe</h1>
-          <div className="space-y-4">
-            <button
-              onClick={() => {
-                setGameMode('friend');
-                setGameStatus('playing');
-              }}
-              className="w-64 p-4 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
-            >
-              Play with Friend
-            </button>
-            <button
-              onClick={() => {
-                setGameMode('ai');
-                setGameStatus('playing');
-              }}
-              className="w-64 p-4 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors"
-            >
-              Play with AI
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  const getStatusMessage = () => {
+    if (winner === 'draw') return 'It\'s a draw!';
+    if (winner) {
+      const playerWon = winner === 1;
+      return playerWon ? 'You won!' : 'AI won!';
+    }
+    if (loading) return 'AI thinking...';
+    if (isPlayerTurn) return 'Your turn';
+    return 'AI\'s turn';
+  };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
-      <div className="max-w-md w-full">
-        <h1 className="text-4xl font-bold mb-4 text-center text-gray-800">
-          Tic Tac Toe
-        </h1>
-        <div className="mb-4 text-center">
-          {gameStatus === 'playing' && (
-            <p className="text-xl text-gray-600">
-              {gameMode === 'ai' && currentPlayer === 2 
-                ? "AI's turn" 
-                : `Player ${currentPlayer}'s turn`}
-            </p>
-          )}
-          {isThinking && <p className="text-xl text-gray-600">AI is thinking...</p>}
-          {gameStatus === 'won' && (
-            <p className="text-xl text-green-600">
-              {winner === 2 && gameMode === 'ai' 
-                ? 'AI wins!' 
-                : `Player ${winner} wins!`}
-            </p>
-          )}
-          {gameStatus === 'draw' && (
-            <p className="text-xl text-yellow-600">It's a draw!</p>
-          )}
-        </div>
-        <div className="grid grid-cols-3 gap-4 aspect-square mb-4">
-          {board.map((value, index) => renderCell(value, index))}
-        </div>
-        <div className="text-center">
-          <button
-            onClick={resetGame}
-            className="px-6 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors"
-          >
-            Reset Game
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-};
+    <main className="min-h-screen flex flex-col items-center justify-center bg-gray-100 p-4">
+      <div className="max-w-lg w-full mx-auto text-center">
+        <h1 className="text-4xl font-bold mb-8 text-gray-800">Tic Tac Toe vs AI</h1>
+        
+        {!gameStarted ? (
+          <div className="mb-8 space-y-6">
+            <h2 className="text-2xl mb-4 text-gray-700">Choose who goes first:</h2>
+            <div className="space-x-4">
+              <button
+                onClick={() => startGame(true)}
+                className="bg-blue-500 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-600 transition-colors duration-200"
+                disabled={loading}
+              >
+                Play First (X)
+              </button>
+              <button
+                onClick={() => startGame(false)}
+                className="bg-green-500 text-white px-6 py-3 rounded-lg font-semibold hover:bg-green-600 transition-colors duration-200"
+                disabled={loading}
+              >
+                Play Second (O)
+              </button>
+            </div>
+          </div>
+        ) : (
+          <>
+            <div className="grid grid-cols-3 gap-2 mb-8 max-w-[384px] mx-auto">
+              {board.map((cell, index) => (
+                <button
+                  key={index}
+                  onClick={() => makeMove(index)}
+                  className={getCellStyle(index)}
+                  disabled={!isPlayerTurn || winner || loading || cell !== 0}
+                >
+                  <span className={cell === 1 ? 'text-blue-500' : 'text-red-500'}>
+                    {getCellSymbol(cell)}
+                  </span>
+                </button>
+              ))}
+            </div>
 
-export default TicTacToe;
+            <div className="text-2xl mb-6 h-8 text-gray-700">
+              {getStatusMessage()}
+            </div>
+
+            <button
+              onClick={() => startGame(true)}
+              className="bg-purple-500 text-white px-8 py-3 rounded-lg font-semibold hover:bg-purple-600 transition-colors duration-200"
+              disabled={loading}
+            >
+              New Game
+            </button>
+          </>
+        )}
+      </div>
+    </main>
+  );
+}
