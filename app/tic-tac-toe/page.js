@@ -8,7 +8,8 @@ const TicTacToe = () => {
   const [gameMode, setGameMode] = useState(null); // null, 'ai', or 'friend'
   const [gameStatus, setGameStatus] = useState('select'); // select, playing, won, draw
   const [winner, setWinner] = useState(null);
-  const [isThinking, setIsThinking] = useState(false); // New state for AI thinking
+  const [isThinking, setIsThinking] = useState(false); // For AI thinking state
+  const [isProcessing, setIsProcessing] = useState(false); // For any move processing
 
   const winningCombos = [
     [0, 1, 2], [3, 4, 5], [6, 7, 8], // rows
@@ -47,7 +48,14 @@ const TicTacToe = () => {
   };
 
   const handleClick = async (index) => {
-    if (isThinking || board[index] !== 0 || gameStatus === 'won' || gameStatus === 'draw') return;
+    // Return if cell is occupied, game is over, or processing is happening
+    if (board[index] !== 0 || 
+        gameStatus === 'won' || 
+        gameStatus === 'draw' || 
+        isProcessing || 
+        isThinking) return;
+
+    setIsProcessing(true); // Start processing state
 
     const newBoard = [...board];
     newBoard[index] = currentPlayer;
@@ -57,13 +65,13 @@ const TicTacToe = () => {
     if (result) {
       setGameStatus(result === 'draw' ? 'draw' : 'won');
       setWinner(result);
+      setIsProcessing(false); // End processing state
       return;
     }
 
     if (gameMode === 'ai' && currentPlayer === 1) {
-      setIsThinking(true); // Set thinking state to true
+      setIsThinking(true); // Set thinking state for AI
       const aiMove = await getAIMove(newBoard);
-      setIsThinking(false); // Reset thinking state after getting the move
 
       if (aiMove !== null) {
         setTimeout(() => {
@@ -75,10 +83,16 @@ const TicTacToe = () => {
             setGameStatus(aiResult === 'draw' ? 'draw' : 'won');
             setWinner(aiResult);
           }
+          setIsThinking(false); // Reset thinking state
+          setIsProcessing(false); // End processing state
         }, 500);
+      } else {
+        setIsThinking(false);
+        setIsProcessing(false);
       }
     } else {
       setCurrentPlayer(currentPlayer === 1 ? 2 : 1);
+      setIsProcessing(false); // End processing state
     }
   };
 
@@ -87,16 +101,23 @@ const TicTacToe = () => {
     setCurrentPlayer(1);
     setGameStatus('playing');
     setWinner(null);
-    setIsThinking(false); // Reset thinking state on game reset
+    setIsThinking(false);
+    setIsProcessing(false);
   };
 
   const renderCell = (value, index) => {
+    const isDisabled = isProcessing || isThinking;
+    
     return (
       <button
         key={index}
         onClick={() => handleClick(index)}
-        className="w-full h-full flex items-center justify-center bg-white hover:bg-gray-100 border border-gray-200 rounded-lg transition-colors"
-        disabled={isThinking || value !== 0 || gameStatus === 'won' || gameStatus === 'draw'} // Disable button if AI is thinking or game is over
+        disabled={isDisabled}
+        className={`w-full h-full flex items-center justify-center border border-gray-200 rounded-lg transition-colors ${
+          isDisabled 
+            ? 'bg-gray-100 cursor-not-allowed' 
+            : 'bg-white hover:bg-gray-100'
+        }`}
       >
         {value === 1 && <X className="w-12 h-12 text-blue-500" />}
         {value === 2 && <Circle className="w-12 h-12 text-red-500" />}
@@ -148,7 +169,7 @@ const TicTacToe = () => {
                 : `Player ${currentPlayer}'s turn`}
             </p>
           )}
-          {isThinking && <p className="text-xl text-gray-600">AI is thinking...</p>} {/* Display thinking message */}
+          {isThinking && <p className="text-xl text-gray-600">AI is thinking...</p>}
           {gameStatus === 'won' && (
             <p className="text-xl text-green-600">
               {winner === 2 && gameMode === 'ai' 
