@@ -4,4 +4,9 @@
 <changefreq>daily</changefreq>
 <priority>1</priority>
 </url>
+<url>
+<loc>https://bijayakumartamang.com.np/tic-tac-toe</loc>
+<changefreq>daily</changefreq>
+<priority>1</priority>
+</url>
 </urlset>
