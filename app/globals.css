@@ -6,6 +6,37 @@
     padding: 5px;
     border-bottom: 1px solid #ccc;
   }
+  /* Body Background Options */
+/* Option 1: Tropical Theme */
+.body-tropical {
+  @apply bg-gradient-to-b from-teal-50 to-white;
+}
+
+/* Option 2: Cyberpunk Theme */
+.body-cyberpunk {
+  @apply bg-gray-950 text-gray-100;
+}
+
+/* Option 3: Earthy Theme */
+.body-earthy {
+  @apply bg-amber-50 text-amber-900;
+}
+
+/* Option 4: Light Neutral (default) */
+.body-light {
+  @apply bg-white text-gray-800;
+}
+
+/* Option 5: Dark Mode */
+.body-dark {
+  @apply bg-gray-900 text-gray-100;
+}
+
+/* Menu Bar Styles (unchanged) */
+.menu-bar {
+  padding: 5px;
+  border-bottom: 1px solid #ccc;
+}
   
   .menu-bar button {
     margin-right: 5px;
