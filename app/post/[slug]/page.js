@@ -3,7 +3,13 @@ import formatDate from './formatDate';
 import MovieButton from './Button';
 
 async function getBlogPost(slug) {
-  const res = await fetch(`https://blog-teal-zeta-25.vercel.app/api/blog/${slug}`, { next: { revalidate: 60 } });
+  const res = await fetch(`https://bijayakumartamang.com.np/api/blog/${slug}`, { 
+    next: { 
+      revalidate: 60,
+      tags: [`blog-${slug}`] // Add cache tag for this specific post
+    },
+    cache: 'no-store' // Consider this if you need the most fresh data
+  });
   if (!res.ok) {
     notFound();
   }
