@@ -16,7 +16,7 @@ export default function SecurityAnalyzer() {
   const [code, setCode] = useState('');
   const [file, setFile] = useState(null);
 
-  const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'https://portbijay.pythonanywhere.com';
+  const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'https://portbijay.pythonanywhere.com/';
   const { refreshAccessToken } = useAuth();
 
   const analyzeCode = async () => {
@@ -261,13 +261,13 @@ export default function SecurityAnalyzer() {
                 >
                   {loading ? (
                     <>
-                      <Loader className="w-5 h-5 mr-2 animate-spin" />
-                      Scanning for Vulnerabilities...
+                      <div className="w-5 h-5 mr-3 border-2 border-white/20 border-t-white rounded-full animate-spin"></div>
+                      🐕 BugHound Scanning...
                     </>
                   ) : (
                     <>
                       <Shield className="w-5 h-5 mr-2" />
-                      Start Security Analysis
+                      🔍 Start Security Hunt
                     </>
                   )}
                 </button>
@@ -304,17 +304,28 @@ export default function SecurityAnalyzer() {
 
               {!result && !loading && (
                 <div className="flex flex-col items-center justify-center h-64 text-gray-400">
-                  <Shield className="w-16 h-16 mb-4 opacity-50" />
-                  <p className="text-lg">No analysis performed yet</p>
-                  <p className="text-sm">Select an input method and start scanning</p>
+                  <div className="text-6xl mb-4">🐕</div>
+                  <p className="text-lg">BugHound is ready to hunt!</p>
+                  <p className="text-sm">Select an input method and start the security scan</p>
                 </div>
               )}
 
               {loading && (
                 <div className="flex flex-col items-center justify-center h-64">
-                  <Loader className="w-12 h-12 text-cyan-400 animate-spin mb-4" />
-                  <p className="text-lg text-white">Analyzing code security...</p>
-                  <p className="text-sm text-gray-400">This may take a few moments</p>
+                  <div className="relative mb-6">
+                    <div className="w-16 h-16 border-4 border-cyan-400/20 border-t-cyan-400 rounded-full animate-spin"></div>
+                    <Shield className="w-8 h-8 text-cyan-400 absolute top-4 left-4" />
+                  </div>
+                  <div className="text-center space-y-2">
+                    <p className="text-lg text-white font-semibold">🐕 BugHound is sniffing...</p>
+                    <p className="text-sm text-gray-400">Deep scanning for security vulnerabilities</p>
+                    <div className="flex items-center justify-center space-x-1 mt-4">
+                      <div className="w-2 h-2 bg-cyan-400 rounded-full animate-bounce"></div>
+                      <div className="w-2 h-2 bg-cyan-400 rounded-full animate-bounce" style={{animationDelay: '0.1s'}}></div>
+                      <div className="w-2 h-2 bg-cyan-400 rounded-full animate-bounce" style={{animationDelay: '0.2s'}}></div>
+                    </div>
+                    <p className="text-xs text-gray-500 mt-4">This may take 30-120 seconds for complex analysis</p>
+                  </div>
                 </div>
               )}
 
@@ -360,8 +371,7 @@ export default function SecurityAnalyzer() {
         {/* Footer */}
         <div className="text-center mt-12 text-gray-400">
           <p className="flex items-center justify-center">
-            <Shield className="w-4 h-4 mr-2" />
-            Powered by AI-driven security analysis • Always verify results manually
+            🐕 <span className="mx-2">BugHound</span> • Sniffing out bugs before the hackers do!
           </p>
         </div>
       </div>
