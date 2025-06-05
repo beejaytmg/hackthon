@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Shield, Upload, Globe, Code, AlertTriangle, CheckCircle, Loader, Eye, EyeOff } from 'lucide-react';
+import { Shield, Upload, Globe, Code, AlertTriangle, CheckCircle, Loader, Eye, EyeOff, Bug, Zap, Lock, Unlock, XCircle } from 'lucide-react';
 import { useAuth } from '@/app/hooks/useAuth';
 
 export default function SecurityAnalyzer() {
@@ -130,6 +130,78 @@ export default function SecurityAnalyzer() {
     setError('');
   };
 
+  // Enhanced function to format and style analysis results
+  const formatAnalysisResult = (analysis) => {
+    if (!analysis) return '';
+
+    // Convert HTML to a more readable format with cybersecurity styling
+    let formattedAnalysis = analysis
+      // Replace headers with styled versions
+      .replace(/<h([1-6])>(.*?)<\/h[1-6]>/gi, (match, level, content) => {
+        const icons = {
+          'vulnerabilities found': '🚨',
+          'security issues': '⚠️',
+          'recommendations': '🛡️',
+          'summary': '📊',
+          'analysis': '🔍',
+          'findings': '🎯'
+        };
+        
+        const icon = Object.keys(icons).find(key => 
+          content.toLowerCase().includes(key)
+        ) ? icons[Object.keys(icons).find(key => content.toLowerCase().includes(key))] : '🔒';
+        
+        return `<div class="cyber-header-${level} flex items-center mb-4 mt-6">
+          <span class="text-2xl mr-2">${icon}</span>
+          <h${level} class="text-cyan-300 font-bold text-lg">${content}</h${level}>
+        </div>`;
+      })
+      // Style vulnerability entries
+      .replace(/<li>(.*?)<\/li>/gi, '<li class="cyber-list-item mb-3 p-3 bg-gray-800/30 border-l-4 border-red-400 text-gray-200">🔴 $1</li>')
+      // Style paragraphs
+      .replace(/<p>(.*?)<\/p>/gi, '<p class="text-gray-300 leading-relaxed mb-4 bg-gray-900/20 p-3 rounded border border-gray-700/50">$1</p>')
+      // Style code blocks
+      .replace(/<code>(.*?)<\/code>/gi, '<code class="bg-black/40 text-cyan-400 px-2 py-1 rounded font-mono text-sm border border-cyan-500/30">$1</code>')
+      // Style pre blocks
+      .replace(/<pre>(.*?)<\/pre>/gi, '<pre class="bg-black/60 text-green-400 p-4 rounded-lg border border-green-500/20 overflow-x-auto font-mono text-sm my-4">$1</pre>')
+      // Style strong/bold text
+      .replace(/<strong>(.*?)<\/strong>/gi, '<strong class="text-yellow-400 font-bold">⚡ $1</strong>')
+      .replace(/<b>(.*?)<\/b>/gi, '<b class="text-yellow-400 font-bold">⚡ $1</b>')
+      // Style unordered lists
+      .replace(/<ul>(.*?)<\/ul>/gi, '<ul class="space-y-2 my-4">$1</ul>')
+      // Style ordered lists
+      .replace(/<ol>(.*?)<\/ol>/gi, '<ol class="space-y-2 my-4 counter-reset-none">$1</ol>');
+
+    return formattedAnalysis;
+  };
+
+  const getSeverityBadge = (analysis) => {
+    if (!analysis) return null;
+    
+    const text = analysis.toLowerCase();
+    if (text.includes('critical') || text.includes('high risk')) {
+      return <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-red-900/50 text-red-300 border border-red-500/50">
+        <XCircle className="w-3 h-3 mr-1" />
+        CRITICAL
+      </span>;
+    } else if (text.includes('medium') || text.includes('warning')) {
+      return <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-yellow-900/50 text-yellow-300 border border-yellow-500/50">
+        <AlertTriangle className="w-3 h-3 mr-1" />
+        MEDIUM
+      </span>;
+    } else if (text.includes('low') || text.includes('info')) {
+      return <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-900/50 text-blue-300 border border-blue-500/50">
+        <Zap className="w-3 h-3 mr-1" />
+        LOW
+      </span>;
+    } else {
+      return <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-900/50 text-green-300 border border-green-500/50">
+        <Lock className="w-3 h-3 mr-1" />
+        SECURE
+      </span>;
+    }
+  };
+
   const tabs = [
     { id: 'url', label: 'URL Analysis', icon: Globe },
     { id: 'file', label: 'File Upload', icon: Upload },
@@ -151,7 +223,7 @@ export default function SecurityAnalyzer() {
             </h1>
           </div>
           <p className="text-cyan-400 text-xl font-semibold mb-2">
-            Sniffing out bugs before the hackers do!
+            🐕 Sniffing out bugs before the hackers do!
           </p>
           <p className="text-gray-300 text-lg max-w-2xl mx-auto">
             Advanced AI-powered security vulnerability scanner. 
@@ -330,36 +402,60 @@ export default function SecurityAnalyzer() {
               )}
 
               {result && (
-                <div className="space-y-4">
-                  {/* Analysis Info */}
-                  <div className="bg-gray-900/50 rounded-lg p-4">
-                    <h3 className="text-lg font-semibold text-white mb-2">Scan Summary</h3>
-                    <div className="text-sm text-gray-300">
-                      <span className="inline-block bg-cyan-600/20 text-cyan-300 px-2 py-1 rounded mr-2">
-                        Input Type: {result.input_type?.toUpperCase()}
+                <div className="space-y-6">
+                  {/* Analysis Info Header */}
+                  <div className="bg-gradient-to-r from-gray-900/80 to-gray-800/80 rounded-lg p-4 border border-cyan-500/20">
+                    <div className="flex items-center justify-between mb-3">
+                      <h3 className="text-lg font-semibold text-white flex items-center">
+                        <Bug className="w-5 h-5 text-cyan-400 mr-2" />
+                        Scan Summary
+                      </h3>
+                      {getSeverityBadge(result.analysis)}
+                    </div>
+                    <div className="flex flex-wrap gap-2 text-sm">
+                      <span className="inline-flex items-center bg-cyan-900/30 text-cyan-300 px-3 py-1 rounded-full border border-cyan-500/30">
+                        <Globe className="w-3 h-3 mr-1" />
+                        Input: {result.input_type?.toUpperCase() || 'UNKNOWN'}
                       </span>
-                      <span className="inline-block bg-green-600/20 text-green-300 px-2 py-1 rounded">
-                        Analysis Complete
+                      <span className="inline-flex items-center bg-green-900/30 text-green-300 px-3 py-1 rounded-full border border-green-500/30">
+                        <CheckCircle className="w-3 h-3 mr-1" />
+                        Status: COMPLETE
                       </span>
                     </div>
                   </div>
 
-                  {/* Analysis Results */}
-                  <div className="bg-gray-900/50 rounded-lg p-4">
-                    <h3 className="text-lg font-semibold text-white mb-4">Security Report</h3>
-                    <div 
-                      className="prose prose-invert prose-cyan max-w-none text-gray-300"
-                      dangerouslySetInnerHTML={{ __html: result.analysis }}
-                    />
+                  {/* Enhanced Analysis Results */}
+                  <div className="bg-gradient-to-b from-gray-900/60 to-gray-800/60 rounded-lg border border-gray-700/50 overflow-hidden">
+                    <div className="bg-gradient-to-r from-cyan-900/20 to-blue-900/20 px-4 py-3 border-b border-gray-700/50">
+                      <h3 className="text-lg font-semibold text-white flex items-center">
+                        <Shield className="w-5 h-5 text-cyan-400 mr-2" />
+                        🛡️ Security Analysis Report
+                      </h3>
+                    </div>
+                    <div className="p-6 max-h-96 overflow-y-auto">
+                      <div 
+                        className="cyber-analysis-content"
+                        dangerouslySetInnerHTML={{ 
+                          __html: formatAnalysisResult(result.analysis) 
+                        }}
+                      />
+                    </div>
                   </div>
 
                   {/* Raw Response (collapsible) */}
                   {showCode && (
-                    <div className="bg-gray-900/50 rounded-lg p-4">
-                      <h3 className="text-lg font-semibold text-white mb-4">Raw API Response</h3>
-                      <pre className="text-xs text-gray-300 bg-black/30 p-4 rounded overflow-auto max-h-64">
-                        {JSON.stringify(result, null, 2)}
-                      </pre>
+                    <div className="bg-black/40 rounded-lg border border-gray-700/50">
+                      <div className="bg-gray-900/60 px-4 py-3 border-b border-gray-700/50">
+                        <h3 className="text-lg font-semibold text-white flex items-center">
+                          <Code className="w-5 h-5 text-green-400 mr-2" />
+                          Raw API Response
+                        </h3>
+                      </div>
+                      <div className="p-4">
+                        <pre className="text-xs text-green-300 bg-black/60 p-4 rounded border border-green-500/20 overflow-auto max-h-64 font-mono">
+                          {JSON.stringify(result, null, 2)}
+                        </pre>
+                      </div>
                     </div>
                   )}
                 </div>
@@ -371,10 +467,57 @@ export default function SecurityAnalyzer() {
         {/* Footer */}
         <div className="text-center mt-12 text-gray-400">
           <p className="flex items-center justify-center">
-            🐕 <span className="mx-2">BugHound</span> • Sniffing out bugs before the hackers do!
+            🐕 <span className="mx-2 text-cyan-400 font-semibold">BugHound</span> • Sniffing out bugs before the hackers do!
           </p>
         </div>
       </div>
+
+      {/* Custom CSS for enhanced formatting */}
+      <style jsx>{`
+        .cyber-analysis-content {
+          line-height: 1.6;
+        }
+        
+        .cyber-analysis-content h1,
+        .cyber-analysis-content h2,
+        .cyber-analysis-content h3,
+        .cyber-analysis-content h4 {
+          color: #67e8f9;
+          margin-top: 1.5rem;
+          margin-bottom: 0.75rem;
+          font-weight: 600;
+        }
+        
+        .cyber-analysis-content ul {
+          list-style: none;
+          padding-left: 0;
+        }
+        
+        .cyber-analysis-content ol {
+          padding-left: 1.5rem;
+        }
+        
+        .cyber-analysis-content .cyber-list-item {
+          position: relative;
+          padding-left: 1rem;
+        }
+        
+        .cyber-analysis-content .cyber-list-item:before {
+          content: "⚠️";
+          position: absolute;
+          left: 0;
+          top: 0.75rem;
+        }
+        
+        .cyber-analysis-content a {
+          color: #22d3ee;
+          text-decoration: underline;
+        }
+        
+        .cyber-analysis-content a:hover {
+          color: #06b6d4;
+        }
+      `}</style>
     </div>
   );
 }
