@@ -14,13 +14,9 @@ export default function RootLayout({ children }) {
       <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9631856282418168"
         crossOrigin="anonymous"></script>
       <body className={bodyTheme}>
-        <Navbar />
         <main className="min-h-screen">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
             {children}
-          </div>
         </main>
-        <Footer />
       </body>
     </html>
   );
