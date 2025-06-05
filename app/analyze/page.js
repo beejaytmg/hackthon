@@ -16,7 +16,7 @@ export default function SecurityAnalyzer() {
   const [code, setCode] = useState('');
   const [file, setFile] = useState(null);
 
-  const API_BASE = 'https://portbijay.pythonanywhere.com';
+  const API_BASE = 'https://portbijay.pythonanywhere.com/api';
 
   // Process the analysis response to improve formatting
   useEffect(() => {
