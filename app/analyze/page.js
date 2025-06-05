@@ -16,7 +16,7 @@ export default function SecurityAnalyzer() {
   const [code, setCode] = useState('');
   const [file, setFile] = useState(null);
 
-  const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'https://portbijay.pythonanywhere.com';
+  const API_BASE = 'https://portbijay.pythonanywhere.com';
 
   // Process the analysis response to improve formatting
   useEffect(() => {
@@ -102,13 +102,9 @@ export default function SecurityAnalyzer() {
     setProcessedAnalysis(null);
 
     try {
-      // Mock authentication for demo
-      const accessToken = 'demo-token';
-
+      let endpoint = '';
       let requestData;
-      let headers = {
-        'Authorization': `Bearer ${accessToken}`,
-      };
+      let headers = {};
 
       if (activeTab === 'url') {
         if (!url.trim()) {
@@ -116,87 +112,68 @@ export default function SecurityAnalyzer() {
           setLoading(false);
           return;
         }
+        
+        endpoint = `${API_BASE}/analyze-url`;
         requestData = JSON.stringify({ url: url.trim() });
-        headers['Content-Type'] = 'application/json';
+        headers = {
+          'Content-Type': 'application/json',
+        };
       } else if (activeTab === 'file') {
         if (!file) {
           setError('Please select a file to upload');
           setLoading(false);
           return;
         }
+        
+        endpoint = `${API_BASE}/analyze-file`;
         requestData = new FormData();
         requestData.append('file', file);
+        // Don't set Content-Type for FormData, let browser set it with boundary
       } else if (activeTab === 'code') {
         if (!code.trim()) {
           setError('Please enter code to analyze');
           setLoading(false);
           return;
         }
+        
+        endpoint = `${API_BASE}/analyze-code`;
         requestData = JSON.stringify({ code: code.trim() });
-        headers['Content-Type'] = 'application/json';
+        headers = {
+          'Content-Type': 'application/json',
+        };
       }
 
-      // Simulate API call with mock data
-      await new Promise(resolve => setTimeout(resolve, 3000));
+      console.log('Making request to:', endpoint);
+      console.log('Request method:', 'POST');
+      console.log('Headers:', headers);
+
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: headers,
+        body: requestData,
+      });
+
+      console.log('Response status:', response.status);
+      console.log('Response headers:', response.headers);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('API Error Response:', errorText);
+        throw new Error(`API Error: ${response.status} ${response.statusText}${errorText ? ` - ${errorText}` : ''}`);
+      }
+
+      const responseData = await response.json();
+      console.log('API Response:', responseData);
       
-      const mockResult = {
+      setResult({
         input_type: activeTab,
-        analysis: `# Security Analysis Report
+        analysis: responseData.analysis || responseData.result || JSON.stringify(responseData, null, 2),
+        ...responseData
+      });
 
-## Executive Summary
-Our BugHound scan has detected several critical vulnerabilities in your code that require immediate attention.
-
-### 1. SQL Injection Vulnerability
-**Risk:** Critical
-**Location:** Line 45, user input processing
-**Description:** User input is directly concatenated into SQL queries without proper sanitization.
-
-Vulnerable Code:
-\`\`\`sql
-SELECT * FROM users WHERE id = ' + userId + '
-\`\`\`
-
-Secure Fix:
-\`\`\`sql
-SELECT * FROM users WHERE id = ?
-\`\`\`
-
-### 2. Cross-Site Scripting (XSS)
-**Risk:** High
-**Location:** Output rendering function
-**Description:** User data is rendered without HTML encoding.
-
-- User input validation missing
-- Output encoding not implemented
-- CSP headers not configured
-
-### 3. Command Injection
-**Risk:** Medium
-**Location:** File processing module
-**Description:** System commands are executed with user-controlled input.
-
-- Input sanitization bypassed
-- Shell command execution detected
-- Privilege escalation possible
-
-### 4. Authentication Bypass
-**Risk:** High
-**Location:** Login verification
-**Description:** Authentication mechanism can be circumvented.
-
-## Recommendations
-- Implement input validation and sanitization
-- Use parameterized queries for database operations
-- Apply proper output encoding for XSS prevention
-- Enable comprehensive security headers
-- Implement proper authentication mechanisms
-- Add rate limiting and monitoring`
-      };
-
-      setResult(mockResult);
     } catch (err) {
-      setError(err.message || 'An error occurred during analysis');
       console.error('Analysis error:', err);
+      setError(err.message || 'An error occurred during analysis. Please check your connection and try again.');
     } finally {
       setLoading(false);
     }
@@ -572,34 +549,36 @@ SELECT * FROM users WHERE id = ?
 
                     {/* Error Display */}
                     {error && (
-                      <div className="bg-red-900/30 border border-red-500/50 rounded-lg p-4 flex items-center">
-                        <AlertTriangle className="w-5 h-5 text-red-400 mr-3" />
-                        <span className="text-red-300">{error}</span>
+                      <div className="bg-red-900/30 border border-red-500/50 rounded-lg p-4 flex items-start">
+                        <AlertTriangle className="w-5 h-5 text-red-400 mr-3 mt-0.5 flex-shrink-0" />
+                        <div className="text-red-300">
+                          <div className="font-medium mb-1">Analysis Failed</div>
+                          <div className="text-sm opacity-90">{error}</div>
+                        </div>
                       </div>
                     )}
-{/* Enhanced Analyze Button */}
+
+                    {/* Enhanced Analyze Button */}
                     <button
                       onClick={analyzeCode}
                       disabled={loading}
-                      className="w-full py-4 px-6 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 disabled:from-gray-600 disabled:to-gray-700 text-white font-semibold rounded-lg transition-all duration-300 transform hover:scale-105 disabled:scale-100 disabled:cursor-not-allowed flex items-center justify-center space-x-3 shadow-2xl border border-red-500/30"
+                      className="w-full bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 disabled:from-gray-600 disabled:to-gray-700 text-white font-semibold py-4 px-6 rounded-lg transition-all duration-300 flex items-center justify-center space-x-3 border border-red-500/50 hover:border-red-400/70 shadow-lg hover:shadow-red-500/25 relative overflow-hidden group"
                     >
-                      {loading ? (
-                        <>
-                          <Loader className="w-5 h-5 animate-spin" />
-                          <span>Scanning for Threats...</span>
-                          <div className="flex space-x-1">
-                            <div className="w-2 h-2 bg-white rounded-full animate-bounce"></div>
-                            <div className="w-2 h-2 bg-white rounded-full animate-bounce delay-100"></div>
-                            <div className="w-2 h-2 bg-white rounded-full animate-bounce delay-200"></div>
-                          </div>
-                        </>
-                      ) : (
-                        <>
-                          <Zap className="w-5 h-5 animate-pulse" />
-                          <span>🐕 Unleash BugHound</span>
-                          <Crosshair className="w-5 h-5" />
-                        </>
-                      )}
+                      <div className="absolute inset-0 bg-gradient-to-r from-red-400/20 to-red-600/20 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left"></div>
+                      <div className="relative z-10 flex items-center">
+                        {loading ? (
+                          <>
+                            <Loader className="w-5 h-5 animate-spin mr-2" />
+                            <span>Scanning for Vulnerabilities...</span>
+                          </>
+                        ) : (
+                          <>
+                            <Zap className="w-5 h-5 animate-pulse" />
+                            <span>🔍 Initiate Security Scan</span>
+                            <Crosshair className="w-4 h-4 ml-2" />
+                          </>
+                        )}
+                      </div>
                     </button>
                   </div>
                 </div>
@@ -607,7 +586,7 @@ SELECT * FROM users WHERE id = ?
 
               {/* Enhanced Results Panel */}
               <div className="bg-gray-800/60 backdrop-blur-lg border border-cyan-500/30 rounded-xl p-6 shadow-2xl relative overflow-hidden">
-                <div className="absolute inset-0 bg-gradient-to-br from-purple-500/5 to-cyan-500/5"></div>
+                <div className="absolute inset-0 bg-gradient-to-br from-green-500/5 to-blue-500/5"></div>
                 <div className="relative z-10">
                   <div className="flex items-center justify-between mb-6">
                     <h2 className="text-2xl font-semibold text-white flex items-center">
@@ -615,7 +594,13 @@ SELECT * FROM users WHERE id = ?
                         <Shield className="w-6 h-6 text-green-400 animate-pulse" />
                       </div>
                       Analysis Results
+                      {result && (
+                        <div className="ml-4 text-xs bg-blue-500/20 text-blue-400 px-2 py-1 rounded-full border border-blue-500/30 animate-pulse">
+                          COMPLETE
+                        </div>
+                      )}
                     </h2>
+                    
                     {result && (
                       <div className="flex items-center space-x-2">
                         <button
@@ -623,7 +608,7 @@ SELECT * FROM users WHERE id = ?
                           className="flex items-center text-sm text-cyan-400 hover:text-cyan-300 bg-gray-700/50 px-3 py-1 rounded-lg transition-all border border-cyan-500/30"
                         >
                           {showCode ? <EyeOff className="w-4 h-4 mr-1" /> : <Eye className="w-4 h-4 mr-1" />}
-                          {showCode ? 'Hide' : 'Show'} Raw
+                          Raw
                         </button>
                         <button
                           onClick={() => setIsFullscreen(true)}
@@ -634,8 +619,9 @@ SELECT * FROM users WHERE id = ?
                         </button>
                         <button
                           onClick={clearResults}
-                          className="text-sm text-red-400 hover:text-red-300 bg-gray-700/50 px-3 py-1 rounded-lg transition-all border border-red-500/30"
+                          className="flex items-center text-sm text-red-400 hover:text-red-300 bg-gray-700/50 px-3 py-1 rounded-lg transition-all border border-red-500/30"
                         >
+                          <X className="w-4 h-4 mr-1" />
                           Clear
                         </button>
                       </div>
@@ -644,40 +630,37 @@ SELECT * FROM users WHERE id = ?
 
                   {loading && (
                     <div className="text-center py-12">
-                      <div className="relative">
-                        <div className="absolute inset-0 animate-ping">
-                          <Shield className="w-16 h-16 text-cyan-400/30 mx-auto" />
+                      <div className="inline-flex items-center space-x-4 bg-gray-900/70 px-6 py-4 rounded-lg border border-cyan-500/30">
+                        <div className="relative">
+                          <Loader className="w-8 h-8 text-cyan-400 animate-spin" />
+                          <div className="absolute inset-0 animate-ping">
+                            <Loader className="w-8 h-8 text-cyan-400/30" />
+                          </div>
                         </div>
-                        <Shield className="w-16 h-16 text-cyan-400 mx-auto mb-4 animate-pulse relative z-10" />
-                      </div>
-                      <h3 className="text-xl font-semibold text-white mb-2">🐕 BugHound is Hunting...</h3>
-                      <p className="text-gray-400 mb-4">Analyzing code for vulnerabilities and security threats</p>
-                      <div className="flex justify-center space-x-2">
-                        <div className="w-3 h-3 bg-cyan-400 rounded-full animate-bounce"></div>
-                        <div className="w-3 h-3 bg-purple-400 rounded-full animate-bounce delay-100"></div>
-                        <div className="w-3 h-3 bg-yellow-400 rounded-full animate-bounce delay-200"></div>
+                        <div className="text-left">
+                          <div className="text-white font-medium">Security Analysis in Progress</div>
+                          <div className="text-cyan-400 text-sm animate-pulse">Deep scanning for vulnerabilities...</div>
+                        </div>
                       </div>
                     </div>
                   )}
 
                   {!loading && !result && (
-                    <div className="text-center py-12 text-gray-400">
-                      <div className="mb-4">
-                        <Bug className="w-16 h-16 mx-auto text-gray-600 animate-pulse" />
-                      </div>
-                      <h3 className="text-xl font-semibold mb-2">Ready for Analysis</h3>
-                      <p>Select your input method and initiate the security scan</p>
-                      <div className="mt-6 grid grid-cols-2 gap-4 text-sm">
-                        <div className="bg-gray-900/50 p-3 rounded-lg border border-gray-700/30">
-                          <Server className="w-6 h-6 text-blue-400 mx-auto mb-2" />
-                          <div className="text-blue-400 font-medium">Web Analysis</div>
-                          <div className="text-gray-500">Scan live websites</div>
+                    <div className="text-center py-16 text-gray-400">
+                      <div className="space-y-4">
+                        <div className="flex justify-center space-x-4 mb-6">
+                          <div className="p-3 bg-gray-700/30 rounded-full">
+                            <Server className="w-8 h-8 text-gray-500" />
+                          </div>
+                          <div className="p-3 bg-gray-700/30 rounded-full">
+                            <Activity className="w-8 h-8 text-gray-500" />
+                          </div>
+                          <div className="p-3 bg-gray-700/30 rounded-full">
+                            <Network className="w-8 h-8 text-gray-500" />
+                          </div>
                         </div>
-                        <div className="bg-gray-900/50 p-3 rounded-lg border border-gray-700/30">
-                          <Terminal className="w-6 h-6 text-green-400 mx-auto mb-2" />
-                          <div className="text-green-400 font-medium">Code Analysis</div>
-                          <div className="text-gray-500">Review source code</div>
-                        </div>
+                        <p className="text-lg">Ready to analyze your code for security vulnerabilities</p>
+                        <p className="text-sm text-gray-500">Select an input method and initiate the security scan</p>
                       </div>
                     </div>
                   )}
@@ -686,350 +669,431 @@ SELECT * FROM users WHERE id = ?
                     <div className="space-y-4">
                       <div className="bg-gray-900/50 border border-gray-700/30 rounded-lg p-4">
                         <div className="flex items-center justify-between mb-2">
-                          <span className="text-sm font-medium text-gray-300">Scan Type:</span>
-                          <span className="text-sm text-cyan-400 bg-cyan-900/30 px-2 py-1 rounded border border-cyan-500/30">
-                            {result.input_type?.toUpperCase()}
-                          </span>
+                          <span className="text-sm text-gray-400">Analysis Type</span>
+                          <span className="text-cyan-400 font-medium capitalize">{result.input_type}</span>
                         </div>
                         <div className="flex items-center justify-between">
-                          <span className="text-sm font-medium text-gray-300">Status:</span>
-                          <span className="text-sm text-green-400 bg-green-900/30 px-2 py-1 rounded border border-green-500/30 flex items-center">
-                            <CheckCircle className="w-3 h-3 mr-1" />
+                          <span className="text-sm text-gray-400">Status</span>
+                          <div className="flex items-center text-green-400">
+                            <CheckCircle className="w-4 h-4 mr-1" />
                             Complete
-                          </span>
+                          </div>
                         </div>
                       </div>
-
-                      <div 
-                        className="analysis-results bg-gray-900/30 p-6 rounded-lg border border-gray-700/30 max-h-96 overflow-y-auto"
-                        dangerouslySetInnerHTML={{ __html: processedAnalysis || result.analysis }}
-                      />
+                      
+                      <div className="bg-gray-900/50 border border-gray-700/30 rounded-lg p-1 max-h-96 overflow-auto">
+                        <div 
+                          className="analysis-results"
+                          dangerouslySetInnerHTML={{ __html: processedAnalysis || result.analysis }}
+                        />
+                      </div>
                     </div>
                   )}
 
                   {result && showCode && (
                     <div className="space-y-4">
-                      <div className="bg-yellow-900/20 border border-yellow-500/30 rounded-lg p-3 flex items-center">
-                        <Code className="w-5 h-5 text-yellow-400 mr-2" />
-                        <span className="text-yellow-300 text-sm">Raw API Response Data</span>
+                      <div className="bg-gray-900/50 border border-gray-700/30 rounded-lg p-4">
+                        <h3 className="text-lg font-semibold text-white mb-2 flex items-center">
+                          <Code className="w-5 h-5 mr-2 text-yellow-400" />
+                          Raw API Response
+                        </h3>
+                        <pre className="text-sm text-gray-300 bg-black/50 p-4 rounded-lg overflow-auto max-h-80 font-mono border border-gray-700/30">
+                          {JSON.stringify(result, null, 2)}
+                        </pre>
                       </div>
-                      <pre className="text-sm text-gray-300 bg-black/60 p-6 rounded-lg overflow-auto max-h-96 border border-gray-700/30 font-mono">
-                        {JSON.stringify(result, null, 2)}
-                      </pre>
                     </div>
                   )}
                 </div>
               </div>
             </div>
+
+            {/* Enhanced Footer */}
+            <div className="mt-12 text-center">
+              <div className="inline-flex items-center space-x-6 bg-gray-800/40 backdrop-blur-lg px-6 py-3 rounded-full border border-gray-700/30">
+                <div className="flex items-center text-sm text-gray-400">
+                  <Wifi className="w-4 h-4 mr-2 text-green-400 animate-pulse" />
+                  Connected to Security API
+                </div>
+                <div className="w-px h-4 bg-gray-600"></div>
+                <div className="flex items-center text-sm text-gray-400">
+                  <Lock className="w-4 h-4 mr-2 text-blue-400" />
+                  Encrypted Analysis
+                </div>
+                <div className="w-px h-4 bg-gray-600"></div>
+                <div className="flex items-center text-sm text-gray-400">
+                  <Activity className="w-4 h-4 mr-2 text-purple-400" />
+                  Real-time Threat Detection
+                </div>
+              </div>
+            </div>
           </div>
         </div>
-
-        {/* Enhanced CSS Styles */}
-        <style jsx global>{`
-          .analysis-results {
-            color: #e5e7eb;
-            line-height: 1.8;
-          }
-          
-          .cyber-container {
-            background: linear-gradient(135deg, rgba(6, 182, 212, 0.05), rgba(147, 51, 234, 0.05));
-            border: 1px solid rgba(6, 182, 212, 0.2);
-            border-radius: 12px;
-            padding: 24px;
-            backdrop-filter: blur(10px);
-          }
-          
-          .section-header.level-1 h2 {
-            color: #06b6d4;
-            font-size: 1.875rem;
-            font-weight: 700;
-            margin: 24px 0 16px 0;
-            padding: 12px 0;
-            border-bottom: 2px solid rgba(6, 182, 212, 0.3);
-            text-shadow: 0 0 10px rgba(6, 182, 212, 0.5);
-          }
-          
-          .section-header.level-2 h3 {
-            color: #a855f7;
-            font-size: 1.5rem;
-            font-weight: 600;
-            margin: 20px 0 12px 0;
-            text-shadow: 0 0 8px rgba(168, 85, 247, 0.4);
-          }
-          
-          .vulnerability-container {
-            background: linear-gradient(135deg, rgba(239, 68, 68, 0.1), rgba(220, 38, 38, 0.05));
-            border: 1px solid rgba(239, 68, 68, 0.3);
-            border-radius: 8px;
-            padding: 16px;
-            margin: 16px 0;
-            position: relative;
-            overflow: hidden;
-          }
-          
-          .vulnerability-container.critical {
-            background: linear-gradient(135deg, rgba(239, 68, 68, 0.15), rgba(153, 27, 27, 0.1));
-            border-color: rgba(239, 68, 68, 0.5);
-            box-shadow: 0 0 20px rgba(239, 68, 68, 0.2);
-          }
-          
-          .vulnerability-container.high {
-            background: linear-gradient(135deg, rgba(251, 146, 60, 0.12), rgba(194, 65, 12, 0.08));
-            border-color: rgba(251, 146, 60, 0.4);
-          }
-          
-          .vulnerability-container.medium {
-            background: linear-gradient(135deg, rgba(250, 204, 21, 0.1), rgba(161, 98, 7, 0.05));
-            border-color: rgba(250, 204, 21, 0.3);
-          }
-          
-          .vulnerability-title {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            color: #f3f4f6;
-            font-size: 1.25rem;
-            font-weight: 600;
-            margin: 0;
-          }
-          
-          .vuln-text {
-            display: flex;
-            align-items: center;
-          }
-          
-          .threat-badge {
-            font-size: 0.75rem;
-            padding: 4px 8px;
-            border-radius: 12px;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-          }
-          
-          .threat-badge.critical {
-            background: rgba(239, 68, 68, 0.2);
-            color: #fca5a5;
-            border: 1px solid rgba(239, 68, 68, 0.5);
-          }
-          
-          .threat-badge.high {
-            background: rgba(251, 146, 60, 0.2);
-            color: #fed7aa;
-            border: 1px solid rgba(251, 146, 60, 0.5);
-          }
-          
-          .threat-badge.medium {
-            background: rgba(250, 204, 21, 0.2);
-            color: #fef3c7;
-            border: 1px solid rgba(250, 204, 21, 0.5);
-          }
-          
-          .code-block-container {
-            margin: 16px 0;
-            border-radius: 8px;
-            overflow: hidden;
-            border: 1px solid rgba(75, 85, 99, 0.5);
-            background: rgba(17, 24, 39, 0.8);
-          }
-          
-          .code-header {
-            background: linear-gradient(135deg, rgba(6, 182, 212, 0.1), rgba(147, 51, 234, 0.1));
-            padding: 8px 16px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-bottom: 1px solid rgba(75, 85, 99, 0.3);
-          }
-          
-          .code-lang {
-            color: #06b6d4;
-            font-size: 0.75rem;
-            font-weight: 600;
-            letter-spacing: 0.05em;
-          }
-          
-          .code-icon {
-            color: #fbbf24;
-          }
-          
-          .code-block {
-            background: rgba(0, 0, 0, 0.6);
-            color: #e5e7eb;
-            padding: 16px;
-            margin: 0;
-            overflow-x: auto;
-            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
-            font-size: 0.875rem;
-            line-height: 1.6;
-          }
-          
-          .inline-code {
-            background: rgba(6, 182, 212, 0.15);
-            color: #67e8f9;
-            padding: 2px 6px;
-            border-radius: 4px;
-            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
-            font-size: 0.875rem;
-            border: 1px solid rgba(6, 182, 212, 0.3);
-          }
-          
-          .list-container {
-            margin: 16px 0;
-          }
-          
-          .custom-list {
-            list-style: none;
-            padding: 0;
-            margin: 0;
-          }
-          
-          .list-item, .numbered-item {
-            background: rgba(75, 85, 99, 0.2);
-            margin: 8px 0;
-            padding: 12px 16px;
-            border-left: 4px solid rgba(6, 182, 212, 0.5);
-            border-radius: 0 6px 6px 0;
-            transition: all 0.3s ease;
-          }
-          
-          .list-item:hover, .numbered-item:hover {
-            background: rgba(75, 85, 99, 0.3);
-            border-left-color: rgba(6, 182, 212, 0.8);
-            transform: translateX(4px);
-          }
-          
-          .risk-item {
-            display: flex;
-            align-items: center;
-            padding: 12px 16px;
-            margin: 8px 0;
-            border-radius: 8px;
-            position: relative;
-            overflow: hidden;
-          }
-          
-          .risk-item.critical {
-            background: linear-gradient(135deg, rgba(239, 68, 68, 0.15), rgba(153, 27, 27, 0.1));
-            border: 1px solid rgba(239, 68, 68, 0.3);
-          }
-          
-          .risk-item.high {
-            background: linear-gradient(135deg, rgba(251, 146, 60, 0.12), rgba(194, 65, 12, 0.08));
-            border: 1px solid rgba(251, 146, 60, 0.3);
-          }
-          
-          .risk-item.medium {
-            background: linear-gradient(135deg, rgba(250, 204, 21, 0.1), rgba(161, 98, 7, 0.05));
-            border: 1px solid rgba(250, 204, 21, 0.3);
-          }
-          
-          .risk-meter {
-            width: 60px;
-            height: 4px;
-            background: rgba(75, 85, 99, 0.3);
-            border-radius: 2px;
-            margin-left: auto;
-            overflow: hidden;
-          }
-          
-          .risk-fill {
-            height: 100%;
-            border-radius: 2px;
-            transition: width 0.3s ease;
-          }
-          
-          .risk-fill.critical {
-            width: 100%;
-            background: linear-gradient(90deg, #ef4444, #dc2626);
-          }
-          
-          .risk-fill.high {
-            width: 80%;
-            background: linear-gradient(90deg, #fb923c, #c2410c);
-          }
-          
-          .risk-fill.medium {
-            width: 60%;
-            background: linear-gradient(90deg, #facc15, #a16207);
-          }
-          
-          .vulnerable-indicator.critical {
-            background: rgba(239, 68, 68, 0.2);
-            color: #fca5a5;
-            padding: 4px 8px;
-            border-radius: 6px;
-            border: 1px solid rgba(239, 68, 68, 0.5);
-            font-weight: 600;
-          }
-          
-          .vulnerable-label {
-            background: rgba(239, 68, 68, 0.2);
-            color: #fca5a5;
-            padding: 6px 12px;
-            border-radius: 8px;
-            border: 1px solid rgba(239, 68, 68, 0.5);
-            font-weight: 700;
-            display: inline-block;
-            margin: 8px 0;
-          }
-          
-          .secure-label {
-            background: rgba(34, 197, 94, 0.2);
-            color: #86efac;
-            padding: 6px 12px;
-            border-radius: 8px;
-            border: 1px solid rgba(34, 197, 94, 0.5);
-            font-weight: 700;
-            display: inline-block;
-            margin: 8px 0;
-          }
-          
-          .content-paragraph {
-            margin: 16px 0;
-            text-align: left;
-          }
-          
-          .cyber-text {
-            text-shadow: 0 0 8px currentColor;
-          }
-          
-          .cyber-emphasis {
-            color: #06b6d4;
-            text-shadow: 0 0 6px rgba(6, 182, 212, 0.4);
-          }
-          
-          .cyber-dim {
-            color: #9ca3af;
-          }
-          
-          .fullscreen-analysis {
-            max-height: none !important;
-            font-size: 1rem;
-          }
-          
-          .fullscreen-analysis .section-header.level-1 h2 {
-            font-size: 2.25rem;
-          }
-          
-          .fullscreen-analysis .section-header.level-2 h3 {
-            font-size: 1.75rem;
-          }
-          
-          .fullscreen-analysis .vulnerability-container {
-            margin: 24px 0;
-            padding: 24px;
-          }
-          
-          .fullscreen-analysis .code-block {
-            font-size: 1rem;
-            padding: 24px;
-          }
-        `}</style>
       </div>
 
       {/* Fullscreen Modal */}
       <FullscreenModal />
+
+      <style jsx>{`
+        .analysis-results {
+          color: #e5e7eb;
+          line-height: 1.7;
+        }
+        
+        .analysis-results .cyber-container {
+          background: linear-gradient(135deg, rgba(17, 24, 39, 0.8), rgba(31, 41, 55, 0.6));
+          border: 1px solid rgba(6, 182, 212, 0.3);
+          border-radius: 0.75rem;
+          padding: 1.5rem;
+          backdrop-filter: blur(8px);
+        }
+        
+        .analysis-results .section-header {
+          margin: 2rem 0 1rem 0;
+          padding: 0.75rem 1rem;
+          background: linear-gradient(90deg, rgba(6, 182, 212, 0.15), rgba(147, 51, 234, 0.1));
+          border-left: 4px solid #06b6d4;
+          border-radius: 0.5rem;
+          backdrop-filter: blur(4px);
+        }
+        
+        .analysis-results .section-header.level-1 h2 {
+          color: #06b6d4;
+          font-size: 1.5rem;
+          font-weight: 700;
+          margin: 0;
+          text-shadow: 0 0 10px rgba(6, 182, 212, 0.5);
+        }
+        
+        .analysis-results .section-header.level-2 h3 {
+          color: #10b981;
+          font-size: 1.25rem;
+          font-weight: 600;
+          margin: 0;
+        }
+        
+        .analysis-results .section-header.level-3 h4 {
+          color: #f59e0b;
+          font-size: 1.125rem;
+          font-weight: 600;
+          margin: 0;
+        }
+        
+        .analysis-results .vulnerability-container {
+          margin: 1.5rem 0;
+          padding: 1rem;
+          border-radius: 0.75rem;
+          border: 1px solid;
+          background: linear-gradient(135deg, rgba(17, 24, 39, 0.8), rgba(31, 41, 55, 0.4));
+          backdrop-filter: blur(8px);
+        }
+        
+        .analysis-results .vulnerability-container.critical {
+          border-color: rgba(239, 68, 68, 0.5);
+          background: linear-gradient(135deg, rgba(127, 29, 29, 0.3), rgba(17, 24, 39, 0.8));
+        }
+        
+        .analysis-results .vulnerability-container.high {
+          border-color: rgba(245, 158, 11, 0.5);
+          background: linear-gradient(135deg, rgba(146, 64, 14, 0.3), rgba(17, 24, 39, 0.8));
+        }
+        
+        .analysis-results .vulnerability-container.medium {
+          border-color: rgba(59, 130, 246, 0.5);
+          background: linear-gradient(135deg, rgba(29, 78, 216, 0.2), rgba(17, 24, 39, 0.8));
+        }
+        
+        .analysis-results .vulnerability-container.low {
+          border-color: rgba(16, 185, 129, 0.5);
+          background: linear-gradient(135deg, rgba(5, 150, 105, 0.2), rgba(17, 24, 39, 0.8));
+        }
+        
+        .analysis-results .vulnerability-title {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          margin: 0;
+          font-size: 1.125rem;
+          font-weight: 600;
+        }
+        
+        .analysis-results .threat-badge {
+          font-size: 0.75rem;
+          padding: 0.25rem 0.5rem;
+          border-radius: 0.375rem;
+          font-weight: 700;
+          text-transform: uppercase;
+        }
+        
+        .analysis-results .threat-badge.critical {
+          background: rgba(239, 68, 68, 0.2);
+          color: #fca5a5;
+          border: 1px solid rgba(239, 68, 68, 0.5);
+        }
+        
+        .analysis-results .threat-badge.high {
+          background: rgba(245, 158, 11, 0.2);
+          color: #fcd34d;
+          border: 1px solid rgba(245, 158, 11, 0.5);
+        }
+        
+        .analysis-results .threat-badge.medium {
+          background: rgba(59, 130, 246, 0.2);
+          color: #93c5fd;
+          border: 1px solid rgba(59, 130, 246, 0.5);
+        }
+        
+        .analysis-results .threat-badge.low {
+          background: rgba(16, 185, 129, 0.2);
+          color: #6ee7b7;
+          border: 1px solid rgba(16, 185, 129, 0.5);
+        }
+        
+        .analysis-results .code-block-container {
+          margin: 1.5rem 0;
+          border-radius: 0.75rem;
+          overflow: hidden;
+          border: 1px solid rgba(75, 85, 99, 0.5);
+          background: rgba(17, 24, 39, 0.8);
+        }
+        
+        .analysis-results .code-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding: 0.75rem 1rem;
+          background: linear-gradient(90deg, rgba(75, 85, 99, 0.5), rgba(55, 65, 81, 0.5));
+          border-bottom: 1px solid rgba(75, 85, 99, 0.3);
+        }
+        
+        .analysis-results .code-lang {
+          color: #06b6d4;
+          font-weight: 600;
+          font-size: 0.875rem;
+        }
+        
+        .analysis-results .code-icon {
+          color: #f59e0b;
+        }
+        
+        .analysis-results .code-block {
+          background: #0f172a;
+          color: #e2e8f0;
+          padding: 1.5rem;
+          overflow-x: auto;
+          font-family: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
+          font-size: 0.875rem;
+          line-height: 1.6;
+          margin: 0;
+        }
+        
+        .analysis-results .inline-code {
+          background: rgba(6, 182, 212, 0.15);
+          color: #67e8f9;
+          padding: 0.125rem 0.375rem;
+          border-radius: 0.25rem;
+          font-family: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
+          font-size: 0.875rem;
+          border: 1px solid rgba(6, 182, 212, 0.3);
+        }
+        
+        .analysis-results .list-container {
+          margin: 1rem 0;
+        }
+        
+        .analysis-results .custom-list {
+          list-style: none;
+          padding: 0;
+          margin: 0;
+        }
+        
+        .analysis-results .list-item {
+          padding: 0.5rem 0 0.5rem 1.5rem;
+          position: relative;
+          border-left: 2px solid rgba(6, 182, 212, 0.3);
+          margin: 0.5rem 0;
+          background: linear-gradient(90deg, rgba(6, 182, 212, 0.05), transparent);
+          border-radius: 0 0.375rem 0.375rem 0;
+        }
+        
+        .analysis-results .list-item::before {
+          content: '▶';
+          position: absolute;
+          left: 0.5rem;
+          color: #06b6d4;
+          font-size: 0.75rem;
+        }
+        
+        .analysis-results .risk-item {
+          display: flex;
+          align-items: center;
+          padding: 0.75rem;
+          margin: 0.5rem 0;
+          border-radius: 0.5rem;
+          border: 1px solid;
+          position: relative;
+          overflow: hidden;
+        }
+        
+        .analysis-results .risk-item.critical {
+          border-color: rgba(239, 68, 68, 0.5);
+          background: linear-gradient(90deg, rgba(239, 68, 68, 0.1), transparent);
+        }
+        
+        .analysis-results .risk-item.high {
+          border-color: rgba(245, 158, 11, 0.5);
+          background: linear-gradient(90deg, rgba(245, 158, 11, 0.1), transparent);
+        }
+        
+        .analysis-results .risk-item.medium {
+          border-color: rgba(59, 130, 246, 0.5);
+          background: linear-gradient(90deg, rgba(59, 130, 246, 0.1), transparent);
+        }
+        
+        .analysis-results .risk-item.low {
+          border-color: rgba(16, 185, 129, 0.5);
+          background: linear-gradient(90deg, rgba(16, 185, 129, 0.1), transparent);
+        }
+        
+        .analysis-results .risk-meter {
+          width: 60px;
+          height: 4px;
+          background: rgba(75, 85, 99, 0.3);
+          border-radius: 2px;
+          margin-left: auto;
+          overflow: hidden;
+        }
+        
+        .analysis-results .risk-fill {
+          height: 100%;
+          border-radius: 2px;
+          transition: width 0.3s ease;
+        }
+        
+        .analysis-results .risk-fill.critical {
+          width: 100%;
+          background: linear-gradient(90deg, #ef4444, #dc2626);
+        }
+        
+        .analysis-results .risk-fill.high {
+          width: 80%;
+          background: linear-gradient(90deg, #f59e0b, #d97706);
+        }
+        
+        .analysis-results .risk-fill.medium {
+          width: 60%;
+          background: linear-gradient(90deg, #3b82f6, #2563eb);
+        }
+        
+        .analysis-results .risk-fill.low {
+          width: 30%;
+          background: linear-gradient(90deg, #10b981, #059669);
+        }
+        
+        .analysis-results .vulnerable-indicator {
+          display: inline-flex;
+          align-items: center;
+          padding: 0.25rem 0.5rem;
+          border-radius: 0.375rem;
+          font-weight: 600;
+          font-size: 0.875rem;
+        }
+        
+        .analysis-results .vulnerable-indicator.critical {
+          background: rgba(239, 68, 68, 0.2);
+          color: #fca5a5;
+          border: 1px solid rgba(239, 68, 68, 0.5);
+        }
+        
+        .analysis-results .vulnerable-label {
+          background: linear-gradient(90deg, rgba(239, 68, 68, 0.2), rgba(220, 38, 38, 0.2));
+          color: #fca5a5;
+          padding: 0.5rem 1rem;
+          border-radius: 0.5rem;
+          border: 1px solid rgba(239, 68, 68, 0.5);
+          font-weight: 600;
+          display: inline-block;
+          margin: 0.5rem 0;
+        }
+        
+        .analysis-results .secure-label {
+          background: linear-gradient(90deg, rgba(16, 185, 129, 0.2), rgba(5, 150, 105, 0.2));
+          color: #6ee7b7;
+          padding: 0.5rem 1rem;
+          border-radius: 0.5rem;
+          border: 1px solid rgba(16, 185, 129, 0.5);
+          font-weight: 600;
+          display: inline-block;
+          margin: 0.5rem 0;
+        }
+        
+        .analysis-results .content-paragraph {
+          margin: 1rem 0;
+        }
+        
+        .analysis-results .bold-text {
+          color: #06b6d4;
+          font-weight: 700;
+        }
+        
+        .analysis-results .cyber-emphasis {
+          text-shadow: 0 0 5px rgba(6, 182, 212, 0.5);
+        }
+        
+        .analysis-results .cyber-text {
+          background: linear-gradient(90deg, #06b6d4, #8b5cf6);
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+          background-clip: text;
+        }
+        
+        .analysis-results .italic-text {
+          color: #9ca3af;
+        }
+        
+        .analysis-results .cyber-dim {
+          opacity: 0.8;
+        }
+        
+        /* Fullscreen specific styles */
+        .fullscreen-analysis {
+          font-size: 1.1rem;
+          line-height: 1.8;
+        }
+        
+        .fullscreen-analysis .section-header {
+          margin: 2.5rem 0 1.5rem 0;
+          padding: 1rem 1.5rem;
+        }
+        
+        .fullscreen-analysis .vulnerability-container {
+          margin: 2rem 0;
+          padding: 1.5rem;
+        }
+        
+        .fullscreen-analysis .code-block {
+          padding: 2rem;
+          font-size: 1rem;
+        }
+        
+        /* Scrollbar styling */
+        .analysis-results::-webkit-scrollbar {
+          width: 8px;
+        }
+        
+        .analysis-results::-webkit-scrollbar-track {
+          background: rgba(31, 41, 55, 0.5);
+          border-radius: 4px;
+        }
+        
+        .analysis-results::-webkit-scrollbar-thumb {
+          background: linear-gradient(180deg, #06b6d4, #8b5cf6);
+          border-radius: 4px;
+        }
+        
+        .analysis-results::-webkit-scrollbar-thumb:hover {
+          background: linear-gradient(180deg, #0891b2, #7c3aed);
+        }
+      `}</style>
     </>
   );
 }
