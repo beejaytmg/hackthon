@@ -113,7 +113,7 @@ export default function SecurityAnalyzer() {
           return;
         }
         
-        endpoint = `${API_BASE}/analyze-url`;
+        endpoint = `${API_BASE}/analyze-code`;
         requestData = JSON.stringify({ url: url.trim() });
         headers = {
           'Content-Type': 'application/json',
@@ -125,7 +125,7 @@ export default function SecurityAnalyzer() {
           return;
         }
         
-        endpoint = `${API_BASE}/analyze-file`;
+        endpoint = `${API_BASE}/analyze-code`;
         requestData = new FormData();
         requestData.append('file', file);
         // Don't set Content-Type for FormData, let browser set it with boundary
