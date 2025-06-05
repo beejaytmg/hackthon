@@ -16,7 +16,7 @@ export default function SecurityAnalyzer() {
   const [code, setCode] = useState('');
   const [file, setFile] = useState(null);
 
-  const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'https://portbijay.pythonanywhere.com/';
+  const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'https://portbijay.pythonanywhere.com';
   const { refreshAccessToken } = useAuth();
 
   const analyzeCode = async () => {
