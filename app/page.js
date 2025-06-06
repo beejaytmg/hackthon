@@ -1,17 +1,18 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Shield, Bug, Zap, Lock, Globe, Code, AlertTriangle, CheckCircle, ArrowRight, Eye, Target, Database, FileSearch, Skull, TrendingUp } from 'lucide-react';
+import { Shield, Bug, Zap, Lock, Globe, Code, AlertTriangle, CheckCircle, ArrowRight, Eye, Target, Database, FileSearch, Skull, TrendingUp, LogOut, User } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { useAuth } from './hooks/useAuth';
 
 export default function HomePage() {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [stats, setStats] = useState({
     scansCompleted: 0,
     vulnerabilitiesFound: 0,
     threatsBlocked: 0
   });
   const router = useRouter();
+  const { isAuthenticated, user, logout } = useAuth();
 
   // Animate stats on load
   useEffect(() => {
@@ -48,6 +49,11 @@ export default function HomePage() {
 
   const handleLogin = () => {
     router.push('/login');
+  };
+
+  const handleLogout = async () => {
+    await logout();
+    router.refresh();
   };
 
   const vulnerabilityTypes = [
@@ -118,12 +124,30 @@ export default function HomePage() {
                 <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
                 <span className="text-green-400">System Online</span>
               </div>
-              <button
-                onClick={handleLogin}
-                className="bg-cyan-600 hover:bg-cyan-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
-              >
-                Login
-              </button>
+              
+              {/* Conditional Login/User Section */}
+              {isAuthenticated ? (
+                <div className="flex items-center space-x-3">
+                  <div className="flex items-center space-x-2 text-sm">
+                    <User className="w-4 h-4 text-cyan-400" />
+                    <span className="text-white">{user?.username || 'User'}</span>
+                  </div>
+                  <button
+                    onClick={handleLogout}
+                    className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center space-x-1"
+                  >
+                    <LogOut className="w-4 h-4" />
+                    <span>Logout</span>
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={handleLogin}
+                  className="bg-cyan-600 hover:bg-cyan-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+                >
+                  Login
+                </button>
+              )}
             </div>
           </div>
         </nav>
